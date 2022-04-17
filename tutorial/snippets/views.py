@@ -5,51 +5,37 @@ from rest_framework.parsers import JSONParser
 from .models import Snippet
 from .serializers import SnippetSerializerRequest, SnippetSerializerResponse
 from django.http import Http404
+from rest_framework import mixins, generics
 
 
-class SnippetList(APIView):
+class SnippetList(mixins.ListModelMixin,
+                  mixins.CreateModelMixin,
+                  generics.GenericAPIView):
     """
     List all code snippets, or create a new snippet.
     """
-    def get(self, request, format=None):
-        snippets = Snippet.objects.all()
-        serializer = SnippetSerializerResponse(snippets, many=True)
-        return JsonResponse(serializer.data, safe=False)
+    queryset = Snippet.objects.all()
+    serializer_class = SnippetSerializerResponse
 
-    def post(selfself, request, format=None):
-        data = JSONParser().parse(request)  # deserialize
-        serializer = SnippetSerializerResponse(data=data)
-        if serializer.is_valid():
-            serializer.save()
-            return JsonResponse(serializer.data, status=status.HTTP_201_CREATED)
-        return JsonResponse(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    def get(self, request, *args, **kwargs):
+        return self.list(request, *args, **kwargs)
+
+    def post(self, request, *args, **kwargs):
+        return self.create(request, *args, **kwargs)
 
 
-class SnippetDetail(APIView):
-    """
-    Retrieve, update or delete a code snippet.
-    """
-    def get_object(self, pk):
-        try:
-            return Snippet.objects.get(pk=pk)
-        except Snippet.DoesNotExist:
-            raise Http404
+class SnippetDetail(mixins.RetrieveModelMixin,
+                    mixins.UpdateModelMixin,
+                    mixins.DestroyModelMixin,
+                    generics.GenericAPIView):
+    queryset = Snippet.objects.all()
+    serializer_class = SnippetSerializerResponse
 
-    def get(self, request, pk, format=None):
-        snippet = self.get_object(pk)
-        serializer = SnippetSerializerResponse(snippet)
-        return JsonResponse(serializer.data)
+    def get(self, request, *args, **kwargs):
+        return self.retrieve(request, *args, **kwargs)
 
-    def put(self, pk, request, format=None):
-        snippet = self.get_object(pk)
-        data = JSONParser().parse(request)
-        serializer = SnippetSerializerRequest(snippet, data=request.data)
-        if serializer.is_valid():
-            serializer.save()
-            return JsonResponse(serializer.data)
-        return JsonResponse(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    def put(self, request, *args, **kwargs):
+        return self.update(request, *args, **kwargs)
 
-    def delete(self, pk, format=None):
-        snippet = self.get_object(pk)
-        snippet.delete()
-        return HttpResponse(status=status.HTTP_204_NO_CONTENT)
+    def delete(self, request, *args, **kwargs):
+        return self.destroy(request, *args, **kwargs)
